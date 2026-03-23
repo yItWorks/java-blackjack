@@ -5,12 +5,10 @@ import blackjack.domain.judgement.BettingMoney;
 import blackjack.domain.judgement.BettingMoneyInfo;
 import blackjack.domain.judgement.Profit;
 import blackjack.domain.participant.Dealer;
-import blackjack.domain.card.Hand;
 import blackjack.domain.participant.Nickname;
 import blackjack.domain.participant.Participants;
 import blackjack.domain.participant.Player;
 import blackjack.domain.participant.Players;
-import blackjack.domain.judgement.Status;
 import blackjack.domain.card.Trump;
 import blackjack.domain.judgement.ProfitCalculator;
 import blackjack.strategy.ShuffleStrategy;
@@ -18,7 +16,6 @@ import blackjack.utils.Parser;
 import blackjack.utils.RetryExecutor;
 import blackjack.view.InputView;
 import blackjack.view.OutputView;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,24 +30,35 @@ public class BlackjackController {
 
     public void run() {
         Dealer dealer = readyGame();
-        Players players = RetryExecutor.retry(this::readPlayers);
-        Participants participants = new Participants(players, dealer);
-
+        Players players = readPlayers();
+        Participants participants = createParticipants(dealer, players);
         BettingMoneyInfo bettingMoneyInfo = readBettingMoney(players);
 
-        dealer.pitch(players.all());
-        OutputView.printStartMessage(players.all(), dealer);
-        players.all().forEach(this::handleBlackjack);
-        players.all().forEach(player -> handlePlayerAction(player, dealer));
-        handleDealerAction(dealer);
+        gameStart(dealer, players);
 
         printResult(participants, bettingMoneyInfo);
     }
 
     private Dealer readyGame() {
-        Hand emptyHand = new Hand(new ArrayList<>());
         Trump trump = new Trump(shuffleStrategy);
-        return new Dealer(emptyHand, Status.HIT, trump);
+        return new Dealer(trump);
+    }
+
+    private Players readPlayers() {
+        return RetryExecutor.retry(this::readPlayersName);
+    }
+
+    private Players readPlayersName() {
+        String rawNicknames = InputView.readNicknames();
+        List<String> nicknames = Parser.parseNickname(rawNicknames);
+        List<Player> players = nicknames.stream()
+                .map(Player::new)
+                .toList();
+        return new Players(players);
+    }
+
+    private static Participants createParticipants(Dealer dealer, Players players) {
+        return new Participants(dealer, players);
     }
 
     private BettingMoneyInfo readBettingMoney(Players players) {
@@ -68,21 +76,17 @@ public class BlackjackController {
         return new BettingMoney(rawBettingMoney);
     }
 
-    private void printResult(Participants participants, BettingMoneyInfo bettingMoneyInfo) {
-        OutputView.printFinalStatus(participants);
-        Map<Nickname, Profit> playerProfit = ProfitCalculator.calculatePlayerProfit(participants, bettingMoneyInfo);
-        Profit dealerProfit = ProfitCalculator.calculateDealerProfit(playerProfit);
-        OutputView.printProfit(playerProfit, dealerProfit);
-    }
-
-    private void handleDealerAction(Dealer dealer) {
-        dealer.decideStay();
-        while (dealer.isHit()) {
-            dealer.giveCard();
-            dealer.decideStay();
-            OutputView.printDealerHitMessage();
-        }
-        dealer.handleBurst();
+    private void gameStart(Dealer dealer, Players players) {
+        // 딜러가 2장씩 배부
+        dealer.pitch(players.all());
+        // 카드 정보 출력
+        OutputView.printStartMessage(players.all(), dealer);
+        // 블랙잭 플레이어 처리
+        players.all().forEach(this::handleBlackjack);
+        // 플레이어 액션 처리
+        players.all().forEach(player -> handlePlayerAction(player, dealer));
+        // 딜러 액션 처리
+        dealer.playTurn(OutputView::printDealerHitMessage);
     }
 
     private void handleBlackjack(Player player) {
@@ -100,27 +104,19 @@ public class BlackjackController {
         }
     }
 
-    private Players readPlayers() {
-        String rawNicknames = InputView.readNicknames();
-        List<String> nicknames = Parser.parseNickname(rawNicknames);
-        List<Player> players = nicknames.stream()
-                .map(nickname ->
-                        new Player(new Hand(new ArrayList<>()), Status.HIT, nickname))
-                .toList();
-        return new Players(players);
-    }
-
     private Answer readAnswer(final String nickname) {
         return Answer.pick(InputView.readAnswer(nickname));
     }
 
-    private void handleAnswer(final Player player, final Dealer dealer, final Answer answer) {
-        if (answer == Answer.YES) { // HIT
-            dealer.giveCard(player);
-            player.handleBurst();
-        }
-        if (answer == Answer.NO) { // STAY
-            player.stay();
-        }
+    private static void playerDrawCard(Player player, Dealer dealer) {
+        dealer.giveCard(player);
+        player.handleBurst();
+    }
+
+    private void printResult(Participants participants, BettingMoneyInfo bettingMoneyInfo) {
+        OutputView.printFinalStatus(participants);
+        Map<Nickname, Profit> playerProfit = ProfitCalculator.calculatePlayerProfit(participants, bettingMoneyInfo);
+        Profit dealerProfit = ProfitCalculator.calculateDealerProfit(playerProfit);
+        OutputView.printProfit(playerProfit, dealerProfit);
     }
 }
