@@ -1,11 +1,16 @@
 package blackjack.domain.card;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Hand {
     private static final int BURST_THRESHOLD = 21;
 
     private final List<Card> cards;
+
+    public Hand() {
+        cards = new ArrayList<>();
+    }
 
     public Hand(List<Card> cards) {
         this.cards = cards;

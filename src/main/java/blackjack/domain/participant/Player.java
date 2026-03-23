@@ -8,6 +8,11 @@ public class Player extends Participant {
 
     private final Nickname nickname;
 
+    public Player(final String nickname) {
+        super(new Hand(), Status.HIT);
+        this.nickname = Nickname.from(nickname);
+    }
+
     public Player(final Hand hand, final Status status, final String nickname) {
         super(hand, status);
         this.nickname = Nickname.from(nickname);

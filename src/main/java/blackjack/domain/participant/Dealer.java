@@ -13,6 +13,11 @@ public class Dealer extends Participant {
 
     private final Trump trump;
 
+    public Dealer(final Trump trump) {
+        super(new Hand(), Status.HIT);
+        this.trump = trump;
+    }
+
     public Dealer(final Hand hand, final Status status, final Trump trump) {
         super(hand, status);
         this.trump = trump;
@@ -35,6 +40,16 @@ public class Dealer extends Participant {
                     players.forEach(this::giveCard);
                     giveCard();
                 });
+    }
+
+    public void playTurn(Runnable onDraw) {
+        decideStay();
+        while (isHit()) {
+            giveCard();
+            onDraw.run();
+            decideStay();
+        }
+        handleBurst();
     }
 
     public void decideStay() {
