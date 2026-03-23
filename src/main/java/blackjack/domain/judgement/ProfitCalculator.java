@@ -11,16 +11,14 @@ import java.util.stream.Collectors;
 public class ProfitCalculator {
 
     public static Map<Nickname, Profit> calculatePlayerProfit(Participants participants,
-                                                       BettingMoneyInfo bettingMoneyInfo) {
+                                                              BettingMoneyInfo bettingMoneyInfo) {
         Players players = participants.players();
         Dealer dealer = participants.dealer();
         return players.all().stream()
                 .collect(Collectors.toUnmodifiableMap(
-                                Player::getNickname,
-                                player -> player.calculateGameResult(dealer)
-                                        .calculateProfit(bettingMoneyInfo.findMoneyByName(player.getNickname()))
-                        )
-                );
+                        Player::getNickname,
+                        player -> calculateProfit(player, dealer, bettingMoneyInfo)
+                ));
     }
 
     public static Profit calculateDealerProfit(Map<Nickname, Profit> profitByPlayer) {
@@ -28,5 +26,11 @@ public class ProfitCalculator {
                 .reduce(Profit.ZERO, Profit::add);
 
         return totalPlayerProfit.negate();
+    }
+
+    private static Profit calculateProfit(Player player, Dealer dealer, BettingMoneyInfo bettingMoneyInfo) {
+        BettingMoney bettingMoney = bettingMoneyInfo.findMoneyByName(player.getNickname());
+        return player.calculateGameResult(dealer)
+                .calculateProfit(bettingMoney);
     }
 }
