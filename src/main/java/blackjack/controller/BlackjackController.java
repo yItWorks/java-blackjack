@@ -91,9 +91,11 @@ public class BlackjackController {
 
     private void handlePlayerAction(Player player, Dealer dealer) {
         while (player.isHit()) {
-            Answer answer =
-                    RetryExecutor.retry(this::readAnswer, player.getNickname().toString());
-            handleAnswer(player, dealer, answer);
+            Answer answer = RetryExecutor.retry(this::readAnswer, player.getNickname().toString());
+
+            answer.ifYes(() -> playerDrawCard(player, dealer));
+            answer.ifNo(player::stay);
+            
             OutputView.printCardStatus(player);
         }
     }

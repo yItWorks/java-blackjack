@@ -23,4 +23,16 @@ public enum Answer {
                 .filter(answer -> Objects.equals(answer.symbol, symbol))
                 .findFirst().orElseThrow(() -> new IllegalArgumentException("대답은 y 혹은 n으로만 해주세요."));
     }
+
+    public void ifYes(Runnable action) {
+        if (this == YES) {
+            action.run();
+        }
+    }
+
+    public void ifNo(Runnable action) {
+        if (this == NO) {
+            action.run();
+        }
+    }
 }
